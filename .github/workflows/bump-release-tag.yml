@@ -39,13 +39,13 @@ jobs:
         run: |
           new_tag=${{ steps.new_tag.outputs.tag }}
           git tag $new_tag
-          git push https://${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }} $new_tag
+          git push https://rajvaya:${{ secrets.PAT }}@github.com/rajvaya/aisplash-dist.git $new_tag
 
 
       - name: Create Release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
         with:
           tag_name: ${{ steps.new_tag.outputs.tag }}
           release_name: Release ${{ steps.new_tag.outputs.tag }}
