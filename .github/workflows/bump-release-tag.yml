@@ -39,7 +39,7 @@ jobs:
         run: |
           new_tag=${{ steps.new_tag.outputs.tag }}
           git tag $new_tag
-          git push https://${{ secrets..GH_TOKEN }}@github.com/${{ github.repository }} $new_tag
+          git push https://${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }} $new_tag
 
 
       - name: Create Release
