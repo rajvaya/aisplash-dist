@@ -1,4 +1,4 @@
-name: Automatic Release and Version Bump
+name: Auto Increment and Release
 
 on:
   push:
@@ -6,33 +6,48 @@ on:
       - main
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14' # Choose the Node.js version suitable for your project
+      - name: Fetch all history for all tags and branches
+        run: git fetch --prune --unshallow
 
-      - name: Install dependencies
-        run: npm install
+      - name: Calculate new version tag
+        id: new_tag
+        run: |
+          # Get the latest tag, if no tags are found, start with v1.0.0
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null) || latest_tag="v1.0.0"
+          echo "Latest tag: $latest_tag"
 
-      - name: Bump version and create tag
-        uses: mathieudutour/github-tag-action@v5.6
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          default_bump: patch # Automatically bumps the patch version
+          if [ "$latest_tag" == "v1.0.0" ]; then
+            new_tag=$latest_tag
+          else
+            # Increment the patch version
+            IFS='.' read -ra VERSION <<< "${latest_tag#v}"
+            ((VERSION[2]++))
+            new_tag="v${VERSION[0]}.${VERSION[1]}.${VERSION[2]}"
+          fi
+          echo "New tag: $new_tag"
+
+          # Set output
+          echo "::set-output name=tag::$new_tag"
+
+      - name: Create and push new tag
+        run: |
+          new_tag=${{ steps.new_tag.outputs.tag }}
+          git tag $new_tag
+          git push origin $new_tag
 
       - name: Create Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
-          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          release_name: Release ${{ steps.tag_version.outputs.new_tag }}
-          body: 'New release ${{ steps.tag_version.outputs.new_tag }}'
+          tag_name: ${{ steps.new_tag.outputs.tag }}
+          release_name: Release ${{ steps.new_tag.outputs.tag }}
+          body: 'New release ${{ steps.new_tag.outputs.tag }}'
           draft: false
           prerelease: false
